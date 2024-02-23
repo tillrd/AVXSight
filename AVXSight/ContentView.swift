@@ -1,3 +1,5 @@
+// ContentView.swift
+
 import SwiftUI
 import AppKit
 
@@ -24,9 +26,11 @@ struct ContentView: View {
                 }
                 .background(
                     RoundedRectangle(cornerRadius: 10)
-                        .fill(Color(NSColor.windowBackgroundColor))
+                        .fill(Color(NSColor.windowBackgroundColor))
                 )
-                .padding(.horizontal, 16)
+                .padding(.horizontal, 16)  // Increased horizontal padding
+                .padding(.top, 10)         // Optional top padding
+
 
                 List(filteredPlugins.sorted(by: { $0.name < $1.name })) { plugin in
                     NavigationLink(destination: PluginDetailView(plugin: plugin)) {

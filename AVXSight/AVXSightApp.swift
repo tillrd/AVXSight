@@ -1,7 +1,8 @@
+// AVXSight.swift
+
 import SwiftUI
 import AppKit
 
-// Main SwiftUI App
 @main
 struct AVXSightApp: App {
     var body: some Scene {
