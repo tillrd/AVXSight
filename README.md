@@ -1,6 +1,6 @@
 # AVXSight - macOS Audio Plugin Explorer
 
-AVXSight helps you discover and manage your collection of audio plugins on macOS. Get a clear, organized view of your installed AU Component, VST, VST3, and AAX plugins quickly and easily. <br />
+AVXSight helps you discover and manage your collection of audio plugins on macOS. Get a clear, organized view of your installed AUs, VST, VST3, and AAX plugins quickly and easily. <br />
 
 ## Key Features
 
