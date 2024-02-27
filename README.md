@@ -11,8 +11,3 @@ AVXSight helps you discover and manage your collection of audio plugins on macOS
 ## Prerequisites
 
 Xcode, macOS 11+ <br />
-
-## Instructions 
-
-**Download the Source Code:** Download the AVXSight source code from the GitHub repository. <br />
-**Open with Xcode:** Open the downloaded AVXSight project file in Xcode. <br />
