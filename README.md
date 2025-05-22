@@ -1,13 +1,26 @@
-# AVXSight - macOS Audio Plugin Explorer
+# AVXSight
 
-AVXSight helps you discover and manage your collection of audio plugins on macOS. Get a clear, organized view of your installed AUs, VST, VST3, and AAX plugins quickly and easily. <br />
+AVXSight is a macOS app for discovering and listing audio plugins installed in the system Library (`/Library`).
 
-## Key Features
+## Features
+- Scans `/Library/Audio/Plug-Ins` for Audio Unit (AU), VST, VST3, and AAX plugins
+- Displays plugin metadata (version, manufacturer, description if available)
+- Lets you show plugins in Finder, copy their path, or reveal their folder in Terminal
+- Only requests access to `/Library` (system Library) for maximum privacy and simplicity
 
-**Comprehensive Plugin Listing**: Displays a complete list of your installed AU Component, VST, VST3 and AAX audio plugins. <br />
-**Hassle-free Overview**: Provides a straightforward interface to see what plugins you have available. <br />
-**Direct Folder Access**: Open and view the folder location of any listed plugin. <br />
+## Usage
+1. On first launch, click the **Refresh** button and select the `Library` folder at the top level of your disk (Macintosh HD > Library) when prompted.
+2. The app will scan `/Library` for plugins and display them in the list.
+3. You can rescan at any time by clicking **Refresh** again.
 
-## Prerequisites
+## Permissions
+- The app only requests access to `/Library` and does **not** access or scan your user Library (`~/Library`).
+- No background scanning or automatic prompts—everything is manual and user-initiated.
 
-Xcode, macOS 11+ <br />
+## Changes in this version
+- **Simplified scope:** Only scans `/Library` (system Library), not the user Library
+- **Simpler permissions:** Only one folder access prompt, no confusion with sandboxed or user folders
+- **Cleaner UI:** All references to user Library removed
+
+---
+For more details, see the source code or open an issue.

@@ -29,12 +29,20 @@ struct ContentView: View {
                          ProgressView("Scanning for plugins...")
                              .frame(maxWidth: .infinity, alignment: .center)
                              .padding()
-                    } else if !pluginManager.isLoading && sortedPlugins.isEmpty && pluginManager.errorAlert == nil {
-                         Text("No plugins found.\nTry the Refresh button.")
-                             .foregroundColor(.secondary)
-                             .multilineTextAlignment(.center)
-                             .frame(maxWidth: .infinity, alignment: .center)
-                             .padding()
+                    } else if !pluginManager.isLoading && sortedPlugins.isEmpty {
+                        if pluginManager.systemLibraryURL == nil && pluginManager.userLibraryURL == nil {
+                            Text("No access to plugin folders.\nPlease grant access via the Refresh button or check System Settings > Privacy & Security > Files and Folders.")
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                                .frame(maxWidth: .infinity, alignment: .center)
+                                .padding()
+                        } else {
+                            Text("No plugins found in accessible locations.\nTry the Refresh button or check your plugin folders.")
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                                .frame(maxWidth: .infinity, alignment: .center)
+                                .padding()
+                        }
                     } else {
                         // Iterate over the MainActor-safe computed property
                         ForEach(sortedPlugins) { plugin in
@@ -81,20 +89,9 @@ struct ContentView: View {
             }
         }
         .onAppear {
-             // Access manager state (MainActor)
-             if pluginManager.systemLibraryURL == nil && pluginManager.userLibraryURL == nil && pluginManager.fetchedPlugins.isEmpty {
-                  print("onAppear: No bookmarks found and no plugins loaded, triggering initial scan.")
-                 // Create Task to call async func
-                 Task {
-                     await pluginManager.scanForPlugins() // Call MainActor function
-                 }
-             } else if !pluginManager.fetchedPlugins.isEmpty {
-                  print("onAppear: Plugins already loaded (\(pluginManager.fetchedPlugins.count)). Skipping automatic scan.")
-             } else {
-                  print("onAppear: Bookmarks exist but no plugins loaded. User action required (Refresh).")
-             }
+             // Remove all automatic scanning and error prompts on launch
         }
-        // Use the manager's errorAlert (MainActor state)
+        // Only show error alerts if triggered by manual scan
         .alert(item: $pluginManager.errorAlert) { alertItem in
             Alert(title: Text("Error"), message: Text(alertItem.message), dismissButton: .default(Text("OK")))
         }
@@ -113,12 +110,12 @@ struct PluginListItemView: View {
                  .truncationMode(.tail)
 
              HStack(spacing: 4) {
-                 PluginTypeBadge(type: plugin.type) // Use badge view
-
-                 Image(systemName: plugin.isUserDomain ? "person.circle" : "desktopcomputer")
+                 PluginTypeBadge(type: plugin.type)
+                 // Only system Library
+                 Image(systemName: "desktopcomputer")
                       .foregroundColor(.secondary)
                       .imageScale(.small)
-                      .help(plugin.isUserDomain ? "User Library (~/Library)" : "System Library (/Library)")
+                      .help("System Library (/Library)")
              }
          }
          .padding(.vertical, 3)
@@ -184,23 +181,30 @@ struct PluginDetailView: View {
     var body: some View {
         ScrollView {
              VStack(alignment: .leading, spacing: 15) {
-                 HStack(alignment: .top) { // Align top for potentially wrapping title
+                 HStack(alignment: .top) {
                      Text(plugin.name)
                          .font(.title)
-                         .lineLimit(3) // Allow name to wrap slightly more
+                         .lineLimit(3)
                      Spacer()
-                     PluginTypeBadge(type: plugin.type) // Use badge view
-                         .padding(.top, 4) // Adjust badge position slightly
+                     PluginTypeBadge(type: plugin.type)
+                         .padding(.top, 4)
                  }
                  .padding(.bottom, 10)
 
                  DetailRow(label: "Type", value: pluginTypeDescription(plugin.type))
-                 DetailRow(label: "Location", value: plugin.isUserDomain ? "User Library (~/Library)" : "System Library (/Library)")
+                 DetailRow(label: "Location", value: "System Library (/Library)")
                  DetailRow(label: "Path", value: plugin.path)
                     .environment(\.layoutDirection, .leftToRight)
-
+                 if let version = plugin.version {
+                     DetailRow(label: "Version", value: version)
+                 }
+                 if let manufacturer = plugin.manufacturer {
+                     DetailRow(label: "Manufacturer", value: manufacturer)
+                 }
+                 if let desc = plugin.pluginDescription {
+                     DetailRow(label: "Description", value: desc)
+                 }
                  Spacer(minLength: 20)
-
                  Button {
                      showInFinder(plugin: plugin)
                  } label: {
@@ -210,17 +214,48 @@ struct PluginDetailView: View {
                  .buttonStyle(.borderedProminent)
                  .controlSize(.large)
                  .padding(.vertical)
+                 HStack {
+                     Button {
+                         copyPathToClipboard(plugin: plugin)
+                     } label: {
+                         Label("Copy Path", systemImage: "doc.on.doc")
+                     }
+                     Button {
+                         revealInTerminal(plugin: plugin)
+                     } label: {
+                         Label("Reveal in Terminal", systemImage: "terminal")
+                     }
+                 }
              }
              .padding()
              .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
-        // NavigationSplitView handles the detail title implicitly based on selection
     }
-
-    // Action method (runs on MainActor as it's part of a View)
     func showInFinder(plugin: Plugin) {
         let fileURL = URL(fileURLWithPath: plugin.path)
-        NSWorkspace.shared.activateFileViewerSelecting([fileURL]) // AppKit call, safe on MainActor
+        NSWorkspace.shared.activateFileViewerSelecting([fileURL])
+    }
+    func copyPathToClipboard(plugin: Plugin) {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(plugin.path, forType: .string)
+    }
+    func revealInTerminal(plugin: Plugin) {
+        let folderURL = URL(fileURLWithPath: plugin.path).deletingLastPathComponent()
+        // Try to open Terminal at the folder using NSWorkspace
+        let configuration = NSWorkspace.OpenConfiguration()
+        let terminalAppURL = URL(fileURLWithPath: "/System/Applications/Utilities/Terminal.app")
+        NSWorkspace.shared.open([folderURL], withApplicationAt: terminalAppURL, configuration: configuration) { app, error in
+            if let error = error {
+                print("Failed to open Terminal: \(error.localizedDescription). Trying AppleScript fallback.")
+                // Fallback to AppleScript if direct open fails
+                let script = "tell application \"Terminal\"\nactivate\ndo script \"cd \" & quoted form of \"\(folderURL.path)\"\nend tell"
+                if let appleScript = NSAppleScript(source: script) {
+                    var error: NSDictionary?
+                    appleScript.executeAndReturnError(&error)
+                }
+            }
+        }
     }
 }
 
